@@ -76,6 +76,7 @@ CompanyApi.sln                  Solution file
 Directory.Build.props           Shared build settings for every project
 docs/                           Implementation plan and design notes
 openapi-companies.yaml          JSON contract the service must satisfy (do not edit)
+openapi-companies-extended.yaml Same contract plus the documented error responses
 xml-api/                        Upstream XML spec and sample payloads
 src/
   CompanyApi/                   The web API
@@ -88,7 +89,7 @@ src/
 * Warnings are errors. A change that introduces a compiler warning fails the build.
 * XML documentation is generated, so public members in `CompanyApi` need `///` comments. The test project suppresses this rule (`CS1591`).
 * Tests use xunit and NSubstitute. Name them `GivenContext_WhenAction_ExpectedResult` and structure them as Arrange, Act, Assert.
-* The original `openapi-companies.yaml` is never edited. Contract changes go in `docs/openapi-companies-extended.yaml`.
+* The original `openapi-companies.yaml` is never edited. Contract changes go in [openapi-companies-extended.yaml](../openapi-companies-extended.yaml).
 
 ## Architecture
 
