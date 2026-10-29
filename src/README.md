@@ -1,9 +1,9 @@
 ## Overview
 
-The Company API is an ASP.NET Core minimal API that will expose `GET /v1/companies/{id}`. It fetches the matching XML document from a static upstream and returns JSON that matches [openapi-companies.yaml](../openapi-companies.yaml). The design and build order are in [docs/implementation-plan.md](../docs/implementation-plan.md).
+The Company API is an ASP.NET Core minimal API that exposes `GET /v1/companies/{id}`. It fetches the matching XML document from a static upstream and returns JSON that matches [openapi-companies.yaml](../openapi-companies.yaml). The design and build order are in [docs/implementation-plan.md](../docs/implementation-plan.md).
 
 > [!NOTE]
-> The project is being built phase by phase. The scaffold from Phase 0 is in place. The endpoint, upstream integration, and tests described in the plan are not implemented yet, so the API currently returns the template's default response.
+> The project is being built phase by phase. The endpoint, upstream integration, and error handling (Phases 0 to 3) work against the real upstream. Automated tests and packaging (Phases 4 and 5) are not added yet.
 
 ## Prerequisites
 
@@ -34,6 +34,18 @@ Run all commands from the repository root.
    ```
 
    The service listens on `http://localhost:5143`.
+
+4. Call it from a second terminal:
+
+   ```bash
+   curl http://localhost:5143/v1/companies/1
+   curl http://localhost:5143/v1/companies/0
+   curl http://localhost:5143/v1/companies/abc
+   ```
+
+   Ids 1 and 2 return a company, ids with no upstream document (such as 0 and 3) return a 404, and anything that is not a non-negative integer returns a 400. Every error has the body `{ "error": "<code>", "error_description": "<message>" }`. [src/CompanyApi/CompanyApi.http](CompanyApi/CompanyApi.http) has ready-made requests for VS Code (REST Client) and Visual Studio.
+
+   In Development, `/openapi/v1.json` serves the generated OpenAPI document and `/healthz` reports liveness.
 
 ## Debugging in VS Code
 
