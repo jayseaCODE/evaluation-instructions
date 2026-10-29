@@ -1,0 +1,113 @@
+openapi: "3.0.2"
+info:
+  title: MWNZ companies
+  version: "1.0"
+  description: >-
+    JSON contract exposed by the Company API. This is an extended copy of
+    openapi-companies.yaml that documents the error responses the service
+    returns and tightens the path id to an integer. The success response is
+    unchanged.
+servers:
+  - url: https://your-application.com/v1
+paths:
+  /companies/{id}:
+    get:
+      tags:
+        - Companies
+      parameters:
+        - name: id
+          description: Company ID
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int32
+            minimum: 0
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Company"
+              examples:
+                MWNZ:
+                  value:
+                    id: 1
+                    name: MWNZ
+                    description: "..is awesome"
+                Other:
+                  value:
+                    id: 2
+                    name: Other
+                    description: "....is not"
+        "400":
+          description: The id is not a plain non-negative integer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: invalid_id
+                error_description: The company id must be a non-negative integer.
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: company_not_found
+                error_description: No company exists with the requested id.
+        "500":
+          description: Unexpected error inside this service
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: internal_error
+                error_description: An unexpected error occurred.
+        "502":
+          description: The upstream XML service failed or returned an invalid document
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                Unavailable:
+                  value:
+                    error: upstream_unavailable
+                    error_description: The company service is currently unavailable.
+                InvalidResponse:
+                  value:
+                    error: upstream_invalid_response
+                    error_description: The company service returned an invalid response.
+        "504":
+          description: The upstream XML service did not respond in time
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: upstream_timeout
+                error_description: The company service did not respond in time.
+
+components:
+  schemas:
+    Company:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        error_description:
+          type: string
