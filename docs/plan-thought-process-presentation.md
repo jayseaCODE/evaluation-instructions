@@ -131,7 +131,7 @@ Documented in `SOLUTION.md`, not coded:
 * Short-TTL caching
 * OpenTelemetry
 * Rate limiting and authentication
-
+* Publishing the API contract to internal and third-party consumers
 ### OpenTelemetry integration
 
 What it would give:
@@ -154,3 +154,42 @@ What must exist first:
 All settings are environment variables, so the `Dockerfile` does not change.
 
 Local verification: run an OTLP receiver, call ids 1, 0, and `abc`, confirm the traces, then stop the receiver and confirm requests still succeed.
+
+### API contract strategy for consumers
+
+Nothing here is built, because no integration is planned. It is recorded for discussion.
+
+Principles:
+
+* `openapi-companies-extended.yaml` is the single source of truth for the contract
+* Changes stay additive within a major version; breaking changes need `/v2`
+* The generated `/openapi/v1.json` is Development only, so production serves no spec
+
+Which spec do internal developers use?
+
+* The same YAML. Audiences differ in what is exposed and how it is distributed, not in the truth
+* The generated document is not for consumers: it drifts (path `id` is a string, `description` is marked required) and has no examples
+* Its useful role is verification: compare it with the YAML in CI
+* Split public and internal documents only when internal-only endpoints exist
+
+Internal consumers (future):
+
+* Contract tests on both sides, not written until an integration exists
+* Internal NuGet client generated from the YAML (Kiota or NSwag), so other .NET services call the API through a typed client instead of hand-written HTTP, models, and error handling
+* Central registry, Spectral style guide, oasdiff breaking-change check on pull requests
+
+Third parties (future):
+
+* Stable public contract at a stable URL, published on Azure API Management or a developer portal
+* Nothing exposed by accident: only intended operations, real `servers` URL
+* Authentication in the spec (`securitySchemes`), plus rate limits
+* Written versioning and deprecation policy with `Deprecation` and `Sunset` headers
+* Sandbox or mock server so integrators build before they have credentials
+* Generated client SDKs, versioned with the spec
+
+Questions for discussion:
+
+* Who owns the contract and reviews changes to it?
+* What counts as a breaking change that forces `/v2`?
+* When do public and internal documents need to be split?
+* Should the gateway or the service enforce authentication and rate limits?

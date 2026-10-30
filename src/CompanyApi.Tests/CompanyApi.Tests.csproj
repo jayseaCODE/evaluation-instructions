@@ -19,6 +19,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Content Include="..\..\xml-api\1.xml" Link="Fixtures\1.xml" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\xml-api\2.xml" Link="Fixtures\2.xml" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\CompanyApi\CompanyApi.csproj" />
   </ItemGroup>
 

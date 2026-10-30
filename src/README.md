@@ -3,7 +3,7 @@
 The Company API is an ASP.NET Core minimal API that exposes `GET /v1/companies/{id}`. It fetches the matching XML document from a static upstream and returns JSON that matches [openapi-companies.yaml](../openapi-companies.yaml). The design and build order are in [docs/implementation-plan.md](../docs/implementation-plan.md).
 
 > [!NOTE]
-> The project is being built phase by phase. The endpoint, upstream integration, and error handling (Phases 0 to 3) work against the real upstream. Automated tests and packaging (Phases 4 and 5) are not added yet.
+> The project is being built phase by phase. The endpoint, upstream integration, error handling, and automated tests (Phases 0 to 4) are in place. Packaging and documentation (Phase 5) are not added yet.
 
 ## Prerequisites
 
@@ -21,10 +21,16 @@ Run all commands from the repository root.
    dotnet build CompanyApi.sln
    ```
 
-2. Run the tests:
+2. Run the tests. The default run uses a stubbed upstream and needs no network:
 
    ```bash
-   dotnet test CompanyApi.sln
+   dotnet test CompanyApi.sln --filter "Category!=Live"
+   ```
+
+   The live tests call the real upstream on GitHub and run only on request:
+
+   ```bash
+   dotnet test CompanyApi.sln --filter "Category=Live"
    ```
 
 3. Run the API:
