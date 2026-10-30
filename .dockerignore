@@ -1,0 +1,15 @@
+**/bin/
+**/obj/
+.git/
+.github/
+.vscode/
+.vs/
+TestResults/
+docs/
+images/
+xml-api/
+src/CompanyApi.Tests/
+*.md
+*.yaml
+Dockerfile
+.dockerignore

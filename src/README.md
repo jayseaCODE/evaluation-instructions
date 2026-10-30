@@ -3,13 +3,13 @@
 The Company API is an ASP.NET Core minimal API that exposes `GET /v1/companies/{id}`. It fetches the matching XML document from a static upstream and returns JSON that matches [openapi-companies.yaml](../openapi-companies.yaml). The design and build order are in [docs/implementation-plan.md](../docs/implementation-plan.md).
 
 > [!NOTE]
-> The project is being built phase by phase. The endpoint, upstream integration, error handling, and automated tests (Phases 0 to 4) are in place. Packaging and documentation (Phase 5) are not added yet.
+> The project is being built phase by phase. The endpoint, upstream integration, error handling, automated tests, container image, CI pipeline, and production deployment guide are in place.
 
 ## Prerequisites
 
 * .NET SDK 10.0 or later. Check with `dotnet --list-sdks`.
 * Git.
-* Optional: Docker, once the `Dockerfile` is added in Phase 5.
+* Optional: Docker, to build and run the container image.
 
 ## Getting started
 
@@ -53,6 +53,86 @@ Run all commands from the repository root.
 
    In Development, `/openapi/v1.json` serves the generated OpenAPI document and `/healthz` reports liveness.
 
+## Running in Docker
+
+The [Dockerfile](../Dockerfile) builds a small image that runs the API as a non-root user. To deploy it to production, follow the [production deployment guide](../docs/deployment-guide.md). Run all commands from the repository root. Docker must be running.
+
+1. Build the image:
+
+   ```bash
+   docker build --tag company-api:local .
+   ```
+
+   The build restores and publishes the API in a build stage, then copies only the published output into the ASP.NET runtime image.
+
+2. Start the container:
+
+   ```bash
+   docker run --detach --rm --name company-api --publish 8080:8080 company-api:local
+   ```
+
+   The service listens on port 8080 inside the container, published to port 8080 on your machine. The container runs in the Production environment, so `/openapi/v1.json` is not served.
+
+3. Wait until the service is ready. Startup takes a few seconds, and requests sent before then fail with a connection error:
+
+   ```bash
+   curl --silent --fail --retry 30 --retry-all-errors --retry-delay 1 http://localhost:8080/healthz
+   ```
+
+   The command prints `Healthy` when the service is up.
+
+4. Run the same four cases as the live tests. The `-w` option prints the HTTP status after each body:
+
+   ```bash
+   for id in 1 2 0 3; do
+     curl --silent --write-out ' [%{http_code}]\n' "http://localhost:8080/v1/companies/$id"
+   done
+   ```
+
+   Expect these results:
+
+   * Id 1 returns 200 with `{"id":1,"name":"MWNZ","description":"..is awesome"}`.
+   * Id 2 returns 200 with `{"id":2,"name":"Other","description":"....is not"}`.
+   * Ids 0 and 3 return 404 with `{"error":"company_not_found","error_description":"No company exists with the requested id."}`.
+
+5. Optionally check the other error cases:
+
+   ```bash
+   curl --silent --write-out ' [%{http_code}]\n' http://localhost:8080/v1/companies/abc
+   ```
+
+   An id that is not a non-negative integer returns 400 with the `invalid_id` error. To see the upstream failures, start extra containers with a different `Upstream__BaseUrl`. Settings are read from environment variables, and `Upstream__BaseUrl` sets `Upstream:BaseUrl`:
+
+   ```bash
+   # Unreachable upstream: expect 502 with upstream_unavailable
+   docker run --detach --rm --name company-api-502 --publish 8081:8080 \
+     --env Upstream__BaseUrl=http://localhost:1/xml-api company-api:local
+
+   # Non-routable upstream with a 2 second timeout: expect 504 with upstream_timeout after about 2 seconds
+   docker run --detach --rm --name company-api-504 --publish 8082:8080 \
+     --env Upstream__BaseUrl=http://10.255.255.1/xml-api --env Upstream__TimeoutSeconds=2 \
+     company-api:local
+
+   curl --silent --write-out ' [%{http_code}]\n' http://localhost:8081/v1/companies/1
+   curl --silent --write-out ' [%{http_code}]\n' http://localhost:8082/v1/companies/1
+   ```
+
+   Wait a few seconds after starting them, as in step 3, before calling them.
+
+6. View the logs and stop the containers. The `--rm` option removes each container when it stops:
+
+   ```bash
+   docker logs company-api
+   docker stop company-api company-api-502 company-api-504
+   ```
+
+### Docker troubleshooting
+
+* `Cannot connect to the Docker daemon` means Docker is not running. Start Docker Desktop and try again.
+* `Connection reset` or an empty reply right after `docker run` means the service is still starting. Repeat the wait command in step 3.
+* `port is already allocated` means another process uses the port. Change the left side of `--publish`, for example `--publish 9090:8080`, and use that port in the `curl` commands.
+* `The container name is already in use` means an earlier container is still running. Stop it with `docker stop company-api`.
+
 ## Debugging in VS Code
 
 The repository includes a debug configuration in [.vscode/launch.json](../.vscode/launch.json) and a build task in [.vscode/tasks.json](../.vscode/tasks.json).
@@ -92,6 +172,8 @@ If the service was started with `dotnet run`, choose **Run and Debug**, then **.
 ```text
 CompanyApi.sln                  Solution file
 Directory.Build.props           Shared build settings for every project
+Dockerfile                      Container image for the API
+.github/workflows/ci.yml        Build and test pipeline
 docs/                           Implementation plan and design notes
 openapi-companies.yaml          JSON contract the service must satisfy (do not edit)
 openapi-companies-extended.yaml Same contract plus the documented error responses
